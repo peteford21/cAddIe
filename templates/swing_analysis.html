@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Golf Caddie: Swing Analysis{% endblock %}
+
+{% block content %}
+    <h2>Swing Analysis</h2>
+    <p>Capture a picture of your swing or upload one, and tell the AI caddie any notes!</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <form id="swingAnalysisForm" action="{{ url_for('process_swing_analysis') }}" method="post" enctype="multipart/form-data">
+
+        <div class="input-option">
+            <h3>Option 1: Take a new picture with your camera</h3>
+            <div class="camera-controls">
+                <button type="button" id="startCameraButton" class="btn btn-primary">Start Camera</button>
+                <button type="button" id="takePhotoButton" disabled class="btn btn-primary">Take Photo</button>
+                <button type="button" id="clearPhotoButton" disabled class="btn btn-secondary">Clear Photo</button>
+            </div>
+            <video id="video-stream" autoplay playsinline></video>
+            <canvas id="photo-canvas"></canvas>
+            <p class="captured-image-display" id="captured-image-message">Image captured! It will be sent with your request.</p>
+            <input type="hidden" name="camera_image_data" id="camera-image-data">
+        </div>
+
+        <div class="input-option">
+            <h3>Option 2: Or upload an existing picture</h3>
+            <label for="uploaded-image" class="file-upload-label">
+                <span id="file-name-display">No file chosen</span>
+                <span class="btn btn-secondary">Browse</span>
+            </label>
+            <input type="file" name="uploaded_image" id="uploaded-image" accept="image/*" style="display: none;">
+        </div>
+        
+        <p class="info-message">(If both a camera image and an uploaded file are provided, the uploaded file will be used.)</p>
+
+        <div class="input-option">
+            <label for="swing-notes">Any notes about your swing or what you're working on (optional):</label>
+            <textarea id="swing-notes" name="swing_notes" rows="4" placeholder="e.g., 'Trying to stop swaying on backswing', 'Want advice on hip rotation.'"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Analyze Swing</button>
+    </form>
+
+    <div id="response-box" class="swing-analysis-box" style="display: none;">
+        <h3>AI Swing Analysis:</h3>
+        <div class="loading-spinner" id="loading-spinner" style="display: none;"></div>
+        <p id="analysis-paragraph"></p>
+    </div>
+
+    <div class="links-group">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const startCameraButton = document.getElementById('startCameraButton');
+            const takePhotoButton = document.getElementById('takePhotoButton');
+            const clearPhotoButton = document.getElementById('clearPhotoButton');
+            const videoStream = document.getElementById('video-stream');
+            const photoCanvas = document.getElementById('photo-canvas');
+            const capturedImageMessage = document.getElementById('captured-image-message');
+            const cameraImageDataInput = document.getElementById('camera-image-data');
+            const uploadedFileInput = document.getElementById('uploaded-image');
+            const fileNameDisplay = document.getElementById('file-name-display');
+            const swingAnalysisForm = document.getElementById('swingAnalysisForm');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const analysisParagraph = document.getElementById('analysis-paragraph');
+            const responseBox = document.getElementById('response-box');
+
+            let stream; // To hold the camera stream
+
+            // Function to stop camera stream
+            const stopCamera = () => {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    videoStream.srcObject = null;
+                }
+            };
+
+            startCameraButton.addEventListener('click', async () => {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    videoStream.srcObject = stream;
+                    videoStream.style.display = 'block'; // Show video feed
+                    photoCanvas.style.display = 'none'; // Hide canvas initially
+                    capturedImageMessage.style.display = 'none'; // Hide message
+                    takePhotoButton.disabled = false;
+                    clearPhotoButton.disabled = false;
+                    startCameraButton.disabled = true; // Disable start button once started
+                    uploadedFileInput.disabled = true; // Disable file upload when camera is active
+                    uploadedFileInput.value = ''; // Clear file input if camera is started
+                    fileNameDisplay.textContent = 'No file chosen'; // Reset file name display
+                } catch (err) {
+                    console.error('Error accessing camera:', err);
+                    alert('Could not start camera. Please ensure you have given permission.');
+                }
+            });
+
+            takePhotoButton.addEventListener('click', () => {
+                photoCanvas.width = videoStream.videoWidth;
+                photoCanvas.height = videoStream.videoHeight;
+                photoCanvas.getContext('2d').drawImage(videoStream, 0, 0, photoCanvas.width, photoCanvas.height);
+                
+                // Get image data from canvas
+                const imageData = photoCanvas.toDataURL('image/jpeg');
+                cameraImageDataInput.value = imageData; // Set hidden input value
+
+                videoStream.style.display = 'none'; // Hide video feed
+                photoCanvas.style.display = 'block'; // Show captured image
+                capturedImageMessage.style.display = 'block'; // Show captured image message
+
+                // Disable photo taking until cleared or new stream
+                takePhotoButton.disabled = true;
+                uploadedFileInput.disabled = true; // Keep file upload disabled
+                uploadedFileInput.value = ''; // Clear file input if photo is taken
+                fileNameDisplay.textContent = 'No file chosen'; // Reset file name display
+            });
+
+            clearPhotoButton.addEventListener('click', () => {
+                stopCamera(); // Stop the camera stream
+                videoStream.style.display = 'none';
+                photoCanvas.style.display = 'none';
+                capturedImageMessage.style.display = 'none';
+                cameraImageDataInput.value = ''; // Clear hidden input
+                takePhotoButton.disabled = true;
+                clearPhotoButton.disabled = true;
+                startCameraButton.disabled = false; // Allow camera to be restarted
+                uploadedFileInput.disabled = false; // Re-enable file upload
+                uploadedFileInput.value = ''; // Clear file input when clearing photo
+                fileNameDisplay.textContent = 'No file chosen'; // Reset file name display
+            });
+
+            // Handle file input change: disable camera if a file is selected
+            uploadedFileInput.addEventListener('change', () => {
+                if (uploadedFileInput.files.length > 0) {
+                    // Update file name display
+                    fileNameDisplay.textContent = uploadedFileInput.files[0].name;
+
+                    // If a file is selected, ensure camera is stopped and hidden
+                    stopCamera();
+                    videoStream.style.display = 'none';
+                    photoCanvas.style.display = 'none';
+                    capturedImageMessage.style.display = 'none';
+                    cameraImageDataInput.value = ''; // Clear any camera image data
+
+                    // Disable camera controls
+                    startCameraButton.disabled = true;
+                    takePhotoButton.disabled = true;
+                    clearPhotoButton.disabled = true;
+                } else {
+                    // If file input is cleared, re-enable camera controls
+                    fileNameDisplay.textContent = 'No file chosen';
+                    startCameraButton.disabled = false;
+                }
+            });
+
+            // Trigger file input click when label is clicked
+            document.querySelector('label[for="uploaded-image"]').addEventListener('click', () => {
+                uploadedFileInput.click();
+            });
+
+            // Handle form submission
+            swingAnalysisForm.addEventListener('submit', async (e) => {
+                e.preventDefault(); // Prevent default form submission
+
+                loadingSpinner.style.display = 'block'; // Show loading spinner
+                analysisParagraph.innerHTML = ''; // Clear previous analysis
+                responseBox.style.display = 'none'; // Hide response box until analysis is ready
+
+                const formData = new FormData(swingAnalysisForm);
+
+                // If a camera image exists, use it instead of the uploaded file
+                if (cameraImageDataInput.value) {
+                    formData.set('uploaded_image', cameraImageDataInput.value);
+                } else if (uploadedFileInput.files.length > 0) {
+                    formData.set('uploaded_image', uploadedFileInput.files[0]);
+                } else {
+                    alert('Please take a photo or upload an image before getting analysis.');
+                    loadingSpinner.style.display = 'none';
+                    return;
+                }
+
+                try {
+                    const response = await fetch(e.target.action, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const htmlResponse = await response.text();
+                    analysisParagraph.innerHTML = htmlResponse; // Insert the raw HTML from response
+                    responseBox.style.display = 'block'; // Show the analysis box
+                } catch (error) {
+                    console.error('Error fetching swing analysis:', error);
+                    analysisParagraph.innerHTML = '<p class="error-message">Error getting analysis. Please try again.</p>';
+                    responseBox.style.display = 'block'; // Show the analysis box even on error
+                } finally {
+                    loadingSpinner.style.display = 'none'; // Hide loading spinner
+                    // Clear the file input and camera data after submission, forcing a new selection next time
+                    uploadedFileInput.value = '';
+                    fileNameDisplay.textContent = 'No file chosen';
+                    cameraImageDataInput.value = '';
+                    capturedImageMessage.style.display = 'none';
+                    // Re-enable camera start if no camera image was used, or if camera image was cleared
+                    if (!cameraImageDataInput.value) {
+                         startCameraButton.disabled = false;
+                    }
+                    // Re-enable file input if it was disabled by camera, assuming it's clear now
+                    uploadedFileInput.disabled = false;
+                }
+            });
+        });
+    </script>
+{% endblock %}

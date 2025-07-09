@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Golf Caddie: Add Course{% endblock %}
+
+{% block content %}
+    <h2>Add New Golf Course</h2>
+
+    <form action="{{ url_for('add_course') }}" method="post">
+        <label for="name">Course Name:</label>
+        <input type="text" id="name" name="name" required>
+
+        <label for="pars">Par for each hole (comma-separated, 1 to 18 holes):</label>
+        <textarea id="pars" name="pars" rows="3" placeholder="Example: 4,4,3,5,4,4,3,5,4,4,3,5,4,4,3,5,4,4" required>{{ default_pars if default_pars else '' }}</textarea>
+        <p class="info-message" style="text-align: left; margin-top: -10px;">Enter par values for all 18 holes (e.g., 4,4,3,5,...).</p>
+
+        <input type="submit" value="Add Course">
+    </form>
+
+    <p style="margin-top: 30px; text-align: center;"><a href="{{ url_for('list_courses') }}">View All Courses</a></p>
+{% endblock %}

@@ -1,0 +1,546 @@
+/* General Body and Container Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #e0f2f7; /* Light blue background */
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Align to the top */
+    min-height: 100vh;
+    box-sizing: border-box; /* Include padding in element's total width and height */
+}
+
+.container {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    max-width: 800px; /* Increased max-width for more content */
+    width: 100%;
+    margin-top: 50px; /* Space from the top */
+    margin-bottom: 50px; /* Space from the bottom for longer content */
+    box-sizing: border-box;
+}
+
+/* Headings */
+h1 {
+    color: #1a5276; /* Darker blue */
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 2.8em;
+    font-weight: 700;
+}
+
+h2 {
+    color: #1a5276;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 2.2em;
+    font-weight: 600;
+}
+
+h3 {
+    color: #396a8e; /* Slightly lighter blue */
+    margin-top: 25px;
+    margin-bottom: 15px;
+    font-size: 1.6em;
+    text-align: center;
+}
+
+p {
+    line-height: 1.6;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+/* Navigation Links (used in base.html) */
+.nav-links {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 20px; /* Space between links */
+    margin-bottom: 30px;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #007bff; /* Blue for links */
+    padding: 10px 15px;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    font-weight: 500;
+    font-size: 1.1em;
+    border: 1px solid #007bff;
+}
+
+.nav-links a:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.nav-links a.active-nav-item {
+    background-color: #0056b3; /* Darker blue for active item */
+    color: white;
+    border-color: #0056b3;
+}
+
+/* Horizontal Rule */
+hr {
+    border: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
+    margin: 20px 0;
+}
+
+/* Form Styling */
+form {
+    background-color: #f8fcfd; /* Very light blue background for forms */
+    padding: 25px;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+    margin-top: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+}
+
+.form-control {
+    width: calc(100% - 20px); /* Account for padding */
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1em;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+textarea.form-control {
+    resize: vertical; /* Allow vertical resizing */
+    min-height: 80px;
+}
+
+/* Buttons */
+.btn {
+    display: inline-block;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    border: none;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+/* Button Group for multiple buttons */
+.button-group {
+    text-align: center;
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Space between buttons */
+    flex-wrap: wrap;
+}
+
+/* Specific button styles for index.html menu */
+.btn-menu {
+    background-color: #4CAF50; /* Green color */
+    color: white;
+    padding: 15px 30px;
+    font-size: 1.2em;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-menu:hover {
+    background-color: #45a049; /* Darker green on hover */
+}
+
+.btn-menu.active {
+    background-color: #218838; /* Even darker green for active menu item */
+}
+
+.btn-menu.disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+/* File Input Custom Styling */
+.file-name-display {
+    margin-left: 10px;
+    font-style: italic;
+    color: #666;
+}
+
+/* Flash Messages */
+.flashes, .flash-messages {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+}
+
+.flashes li, .flash-messages li {
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.flashes li.success, .flash-messages li.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.flashes li.error, .flashes li.danger, .flash-messages li.error, .flash-messages li.danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.flashes li.warning, .flash-messages li.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
+.flashes li.info, .flash-messages li.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* Image/Camera Input Options (used in shot_advice.html, swing_analysis.html, index.html) */
+.input-option {
+    background-color: #f0f8ff; /* Lighter blue for input sections */
+    border: 1px solid #cce7ff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 25px;
+    text-align: center; /* Center content within these options */
+}
+
+.camera-controls {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.camera-preview {
+    width: 100%;
+    max-width: 480px; /* Limit camera preview width */
+    height: auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin: 15px auto;
+    display: block; /* Ensures it takes full width and centers with margin: auto */
+    background-color: #eee; /* Placeholder background */
+}
+
+#photo-canvas {
+    display: none; /* Hidden by default */
+}
+
+.captured-image-display {
+    color: #28a745; /* Green for success message */
+    font-weight: 500;
+    margin-top: 10px;
+    display: none; /* Hidden by default */
+}
+
+.info-message {
+    font-size: 0.9em;
+    color: #777;
+    margin-top: -10px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Response Box for AI Advice (used in shot_advice.html, swing_analysis.html) */
+.response-box {
+    background-color: #e9f7ef; /* Light green for advice box */
+    border: 1px solid #bce8f1; /* Light blue border */
+    border-radius: 10px;
+    padding: 25px;
+    margin-top: 30px;
+    text-align: left; /* Advice should be left-aligned */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.response-box h2 {
+    color: #28a745; /* Green for Caddie's Advice heading */
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.8em;
+    text-align: center;
+}
+
+.response-box p {
+    color: #36454F; /* Darker text for readability */
+    white-space: pre-wrap; /* Preserves whitespace and line breaks from AI response */
+    font-size: 1.1em;
+    text-align: left;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 30px;
+    font-size: 1.2em;
+    color: #007bff;
+}
+
+.spinner {
+    border: 4px solid rgba(0, 123, 255, 0.1);
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Links Group (for back buttons, view links) */
+.links-group {
+    text-align: center;
+    margin-top: 40px;
+}
+
+.links-group a {
+    margin: 0 10px;
+}
+
+/* Course List (list_courses.html) */
+.course-list {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 20px;
+}
+
+.course-item {
+    background-color: #f0f8ff; /* Light blue */
+    border: 1px solid #cce7ff;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.1em;
+}
+
+.course-item span {
+    font-weight: 500;
+    color: #396a8e;
+}
+
+.par-info {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.no-courses {
+    text-align: center;
+    color: #777;
+    padding: 20px;
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.add-course-link {
+    display: block;
+    text-align: center;
+    margin-top: 30px;
+}
+
+/* Input Yardages (input_yardages.html) */
+.club-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.club-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: #f8fcfd; /* Lighter background */
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.club-item label {
+    flex: 1;
+    font-weight: 600;
+    color: #396a8e;
+    margin-right: 15px;
+}
+
+.club-item input[type="number"] {
+    width: 100px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1em;
+    text-align: right;
+}
+.club-item input[type="number"]:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+/* View Yardages (view_yardages.html) */
+.yardage-list {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 20px;
+}
+
+.yardage-item {
+    background-color: #f0f8ff; /* Light blue */
+    border: 1px solid #cce7ff;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.1em;
+}
+
+.yardage-item .club-name {
+    font-weight: 500;
+    color: #396a8e;
+}
+
+.yardage-item .yardage-value {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.no-data {
+    text-align: center;
+    color: #777;
+    padding: 20px;
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding: 20px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+
+    h1 {
+        font-size: 2.2em;
+    }
+
+    h2 {
+        font-size: 1.8em;
+    }
+
+    h3 {
+        font-size: 1.4em;
+    }
+
+    .nav-links {
+        flex-direction: column; /* Stack navigation links */
+        align-items: center;
+    }
+
+    .nav-links a {
+        width: 80%; /* Make links take more width */
+        text-align: center;
+    }
+
+    .input-option, form {
+        padding: 15px;
+    }
+
+    .form-control {
+        width: calc(100% - 20px);
+    }
+
+    .button-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn {
+        width: 100%; /* Full width buttons on small screens */
+        padding: 10px 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+    .container {
+        padding: 15px;
+    }
+    h1 {
+        font-size: 1.8em;
+    }
+    h2 {
+        font-size: 1.6em;
+    }
+    h3 {
+        font-size: 1.2em;
+    }
+}

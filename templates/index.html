@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf AI Caddie</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Golf AI Caddie!</h1>
+        <p>Your personal assistant for shot advice, swing analysis, and game tracking.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <div class="button-group">
+            <a href="{{ url_for('shot_advice_page') }}" class="btn btn-menu {{ 'active' if current_page == 'shot_advice' }}">Get Shot Advice</a>
+            <a href="{{ url_for('swing_analysis_page') }}" class="btn btn-menu {{ 'active' if current_page == 'swing_analysis' }}">Analyze Your Swing</a>
+            <a href="{{ url_for('input_yardages') }}" class="btn btn-menu {{ 'active' if current_page == 'input_yardages' }}">Input Club Yardages</a>
+            <a href="{{ url_for('view_yardages') }}" class="btn btn-menu {{ 'active' if current_page == 'view_yardages' }}">View Your Yardages</a>
+            <a href="{{ url_for('list_courses') }}" class="btn btn-menu {{ 'active' if current_page == 'courses' }}">Manage Courses</a>
+            <a href="#" class="btn btn-menu disabled">(Future: Track a Round)</a>
+        </div>
+    </div>
+</body>
+</html>
