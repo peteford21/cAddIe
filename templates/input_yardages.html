@@ -1,46 +1,39 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Input Club Yardages - Golf Caddie</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <h1>Enter Your Club Yardages</h1>
-        <p>Please enter the average carry distance (in yards) for each of your clubs. Leave blank if you don't carry that club.</p>
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="flashes">
-                    {% for category, message in messages %}
-                        <li class="{{ category }}">{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
+{% extends 'base.html' %}
 
-        <form action="{{ url_for('input_yardages') }}" method="post">
-            <div class="club-grid">
-                {% for club in clubs %}
-                <div class="club-item">
-                    <label for="{{ club.replace(' ', '_').lower() }}">{{ club }}:</label>
-                    <input type="number" id="{{ club.replace(' ', '_').lower() }}"
-                           name="{{ club.replace(' ', '_').lower() }}"
-                           value="{{ current_yardages.get(club, '') }}"
-                           placeholder="Yards" min="0" max="499">
-                </div>
+{% block title %}AI Golf Caddie: Input Club Yardages{% endblock %}
+
+{% block content %}
+    <h2>Enter Your Club Yardages</h2>
+    <p>Please enter the average carry distance (in yards) for each of your clubs. Leave blank if you don't carry that club.</p>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flash-messages">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
                 {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('input_yardages') }}" method="post">
+        <div class="club-grid">
+            {% for club in clubs %}
+            <div class="club-item">
+                <label for="{{ club.replace('-', '_').lower().replace(' ', '_') }}">{{ club }}:</label>
+                <input type="number" id="{{ club.replace('-', '_').lower().replace(' ', '_') }}"
+                       name="{{ club.replace('-', '_').lower().replace(' ', '_') }}"
+                       value="{{ current_yardages.get(club, '') }}"
+                       placeholder="Yards" min="0" max="499">
             </div>
-            <div class="button-group">
-                <button type="submit" class="btn btn-primary">Save Yardages</button>
-            </div>
-        </form>
-        <div class="links-group">
-            <a href="{{ url_for('view_yardages') }}" class="btn btn-secondary">View Saved Yardages</a>
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
+            {% endfor %}
         </div>
+        <div class="button-group">
+            <button type="submit" class="btn btn-primary">Save Yardages</button>
+        </div>
+    </form>
+    <div class="links-group">
+        <a href="{{ url_for('view_yardages') }}" class="btn btn-secondary">View Saved Yardages</a>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
     </div>
-</body>
-</html>
+{% endblock %}

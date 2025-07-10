@@ -4,6 +4,12 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import base64
 import io
+import logging # Import logging
+import markdown2
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+app_logger = logging.getLogger(__name__)
 
 # --- Database Imports ---
 from flask_sqlalchemy import SQLAlchemy
@@ -34,373 +40,246 @@ class Course(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     # Store par for each hole as a comma-separated string, or a JSON field
-    par_string = db.Column(db.String(200), nullable=False, default='3,4,5,3,4,5,3,4,5,3,4,5,3,4,5,3,4,5')
-    rounds = db.relationship('Round', backref='course', lazy=True)
+    par_string = db.Column(db.String(200), nullable=False, default='3,4,5,3,4,5,3,4,5,3,4,5,3,4,5,3,4,5') # Default for 18 holes of par 4
 
     def __repr__(self):
-        return f"Course('{self.name}')"
-
-    def get_pars(self):
-        return [int(p) for p in self.par_string.split(',')]
-
-    def set_pars(self, pars_list):
-        self.par_string = ','.join(map(str, pars_list))
+        return f'<Course {self.name}>'
 
 class Round(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    date_played = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
-    total_score = db.Column(db.Integer, nullable=True) # Can be calculated or manually entered
-    hole_scores = db.relationship('HoleScore', backref='round', lazy=True, cascade="all, delete-orphan")
+    user_identifier = db.Column(db.String(255), nullable=False) # To link rounds to a user session
+    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    scores_string = db.Column(db.String(200)) # e.g., "4,5,3,..." for 18 holes
+    course = db.relationship('Course', backref=db.backref('rounds', lazy=True))
 
-    def __repr__(self):
-        return f"Round('{self.date_played}', Course ID: {self.course_id})"
+    def get_scores(self):
+        return [int(s) for s in self.scores_string.split(',')] if self.scores_string else []
 
-class HoleScore(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    round_id = db.Column(db.Integer, db.ForeignKey('round.id'), nullable=False)
-    hole_number = db.Column(db.Integer, nullable=False) # 1 to 18
-    score = db.Column(db.Integer, nullable=True)
-    putts = db.Column(db.Integer, nullable=True)
-    fairway_hit = db.Column(db.Boolean, nullable=True) # True/False
-    gir = db.Column(db.Boolean, nullable=True) # Green In Regulation
-    # Add yardage tracking fields (can be expanded)
-    drive_distance = db.Column(db.Integer, nullable=True)
-    approach_distance = db.Column(db.Integer, nullable=True)
+    def calculate_total_score(self):
+        return sum(self.get_scores())
 
-    def __repr__(self):
-        return f"HoleScore(Round ID: {self.round_id}, Hole {self.hole_number}, Score: {self.score})"
+    def calculate_score_to_par(self):
+        course_pars = [int(p) for p in self.course.par_string.split(',')]
+        round_scores = self.get_scores()
+        
+        if len(round_scores) != len(course_pars):
+            # This handles cases where data might be incomplete or mismatched
+            # For a production app, more robust error handling or data validation would be needed
+            return None 
+            
+        score_to_par = sum(s - p for s, p in zip(round_scores, course_pars))
+        return score_to_par
 
-# New Model for Club Yardages
+# Model for User's Club Yardages
 class UserClubYardage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    # For now, let's use a simple session-based user_id. In a real app, this would be a ForeignKey to a User model.
-    user_identifier = db.Column(db.String(100), nullable=False)
+    user_identifier = db.Column(db.String(255), nullable=False, index=True) # Link to user session
     club_name = db.Column(db.String(50), nullable=False)
     yardage = db.Column(db.Integer, nullable=False)
-    
-    # Ensure unique club per user
+
     __table_args__ = (db.UniqueConstraint('user_identifier', 'club_name', name='_user_club_uc'),)
 
     def __repr__(self):
-        return f"UserClubYardage(User: {self.user_identifier}, Club: {self.club_name}, Yardage: {self.yardage})"
+        return f'<UserClubYardage {self.user_identifier} - {self.club_name}: {self.yardage}>'
 
-# Create database tables if they don't exist
-with app.app_context():
-    db.create_all()
-# --- End Database Configuration ---
-
-
-# --- Define a list of common clubs ---
+# Common clubs for display/input
 COMMON_CLUBS = [
-    "Driver", "3 Wood", "5 Wood", "Hybrid",
-    "2 Iron", "3 Iron", "4 Iron", "5 Iron", "6 Iron",
-    "7 Iron", "8 Iron", "9 Iron", "Pitching Wedge",
-    "Gap Wedge", "Sand Wedge", "Lob Wedge", "Putter"
+    "Driver", "3-Wood", "5-Wood", "Hybrid",
+    "2-Iron", "3-Iron", "4-Iron", "5-Iron",
+    "6-Iron", "7-Iron", "8-Iron", "9-Iron",
+    "Pitching Wedge", "Gap Wedge", "Sand Wedge", "Lob Wedge",
+    "Putter"
 ]
 
-# --- Route for the main Shot Situation Advice page ---
-@app.route('/', methods=['GET'])
-def index():
-    """Renders the main home page."""
-    # Ensure a user_identifier is set for yardage tracking
-    if 'user_id' not in session:
-        # This is a simple placeholder. In a real app, manage authenticated users.
-        session['user_id'] = os.urandom(16).hex() # Generate a simple unique ID
-        flash("Welcome! Your session ID has been set.", "info")
-    
-    return render_template('index.html', current_page='home') # Renamed to 'home' for consistency
+# --- End Database Models ---
 
-@app.route('/shot_advice', methods=['GET']) # New route for shot advice
+# Helper to create tables if they don't exist
+with app.app_context():
+    db.create_all()
+
+# Helper function to check allowed file extensions
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
+
+# Helper function to encode image to base64
+def encode_image(image_input):
+    """
+    Encodes an image file or base64 data URL to a base64 string.
+    Expects either a Werkzeug FileStorage object or a data URL string.
+    """
+    if isinstance(image_input, str) and image_input.startswith('data:image'):
+        # It's a data URL from camera, extract base64 part
+        return image_input.split(',')[1]
+    elif hasattr(image_input, 'read'):
+        # It's a file storage object from file input
+        image_input.seek(0) # Ensure we read from the beginning
+        return base64.b64encode(image_input.read()).decode('utf-8')
+    return None
+
+# Helper to generate AI response
+def get_ai_response(prompt_text, image_base64=None, system_message=None):
+    if system_message is None:
+        system_message = "You are a helpful AI assistant." # Default system message
+
+    messages = [{"role": "system", "content": system_message}]
+    
+    user_content = [{"type": "text", "text": prompt_text}]
+    if image_base64:
+        user_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}})
+    
+    messages.append({"role": "user", "content": user_content})
+
+    try:
+        response = client.chat.completions.create(
+            model=AI_MODEL_NAME,
+            messages=messages,
+            max_tokens=500, # Increased max_tokens for more comprehensive advice
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        app_logger.error(f"OpenAI API error: {e}")
+        return f"<p class='error-message'>An error occurred while getting AI response: {e}</p>"
+
+
+@app.route('/')
+def index():
+    # Set a simple user ID for the session if not already set
+    if 'user_id' not in session:
+        session['user_id'] = os.urandom(24).hex() # Generate a random hex string for user ID
+    return render_template('index.html', current_page='home')
+
+@app.route('/shot_advice')
 def shot_advice_page():
-    """Renders the shot advice page."""
     return render_template('shot_advice.html', current_page='shot_advice')
 
 @app.route('/ask_caddie', methods=['POST'])
 def ask_caddie():
-    """Handles the form submission for situational advice, sends data to AI, and displays response."""
-    user_context = request.form.get('context', '') # Get text context from form
-    distance_to_hole_str = request.form.get('distance_to_hole', '').strip() # NEW: Get distance to hole
-    user_identifier = session.get('user_id') # Get user ID to fetch yardages
+    user_situation = request.form.get('situation', '').strip()
+    target_yardage = request.form.get('yardage', '').strip() # Get yardage to target from form
 
-    image_base64 = None
-    image_mimetype = None
+    image_file = request.files.get('image_file')
+    camera_image_data = request.form.get('camera_image_data')
 
-    # --- Image Handling: Prioritize uploaded file over camera image ---
-    if 'uploaded_image' in request.files:
-        uploaded_file = request.files['uploaded_image']
-        if uploaded_file.filename != '':
-            try:
-                image_bytes = uploaded_file.read()
-                image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                image_mimetype = uploaded_file.mimetype
-            except Exception as e:
-                print(f"Error processing uploaded image for /ask_caddie: {e}")
+    image_base64 = encode_image(image_file) if image_file else None
+    if not image_base64 and camera_image_data:
+        image_base64 = encode_image(camera_image_data)
 
-    # If no file was uploaded, check for camera image data
-    if not image_base64 and 'camera_image_data' in request.form:
-        camera_data_url = request.form['camera_image_data']
-        if camera_data_url:
-            try:
-                # Data URL format: data:<mimetype>;base64,<data>
-                header, base64_data = camera_data_url.split(',', 1)
-                image_mimetype = header.split(';')[0].split(':')[1]
-                image_base64 = base64_data
-            except Exception as e:
-                print(f"Error processing camera image data for /ask_caddie: {e}")
-                image_base64 = None
+    # Validate inputs
+    if not user_situation and not image_base64 and not target_yardage:
+        return "<p class='error-message'>Please provide a situation description, yardage, or an image for advice.</p>", 400
 
-    # --- Fetch user's club yardages ---
-    club_yardages_str = ""
+    prompt_parts = []
+    
+    # Fetch user's club yardages for context
+    user_identifier = session.get('user_id')
     if user_identifier:
-        yardage_objects = UserClubYardage.query.filter_by(user_identifier=user_identifier).order_by(UserClubYardage.club_name).all()
-        if yardage_objects:
-            yardage_lines = [f"- {yc.club_name}: {yc.yardage} yards" for yc in yardage_objects]
-            club_yardages_str = "\nYour Club Yardages:\n" + "\n".join(yardage_lines)
+        user_yardages = UserClubYardage.query.filter_by(user_identifier=user_identifier).all()
+        if user_yardages:
+            yardage_info = ", ".join([f"{y.club_name}: {y.yardage} yards" for y in user_yardages])
+            prompt_parts.append(f"My typical club yardages are as follows: {yardage_info}.")
         else:
-            club_yardages_str = "\nNo club yardages saved yet. Please add them in the 'Input Club Yardages' section for more tailored advice."
+            prompt_parts.append("I do not have my club yardages saved yet. Please provide advice based on typical amateur distances if suggesting clubs.")
     else:
-        club_yardages_str = "\nNo user identified. Club yardages cannot be retrieved. Please ensure your session is active."
+        prompt_parts.append("User ID not found, cannot retrieve custom club yardages. Please provide advice based on typical amateur distances if suggesting clubs.")
 
-    # --- Prepare distance to hole for AI ---
-    distance_info = ""
-    if distance_to_hole_str and distance_to_hole_str.isdigit():
-        distance_to_hole = int(distance_to_hole_str)
-        if 0 < distance_to_hole < 1000: # Sensible range for golf distances
-            distance_info = f"\nDistance to target: {distance_to_hole} yards."
-        else:
-            flash("Invalid 'Distance to Hole' entered. Please enter a number between 1 and 999.", "warning")
-    elif distance_to_hole_str: # Not empty but not a digit
-        flash("Invalid 'Distance to Hole' input. Please enter a number.", "warning")
+    if user_situation:
+        prompt_parts.append(f"The golf situation is: {user_situation}.")
+    if target_yardage:
+        prompt_parts.append(f"My current distance to the target is: {target_yardage} yards.")
+    
+    prompt = " ".join(prompt_parts) if prompt_parts else "Please provide golf shot advice."
 
-
-    # --- Construct the messages for OpenAI's Chat Completions API (Shot Advice) ---
-    caddie_persona = (
-        "Act as a professional golf caddie."
-        "The golfer needs advice based on their current situation, any provided image, and their club yardages. "
-        "Assess the situation, offer strategic advice (club choice, shot type, aim). "
-        "When suggesting a club, *always* consider the provided 'Your Club Yardages' data and the 'Distance to target' if available. "
-        "If a specific distance is mentioned, recommend a club from their list that best matches or is close to that distance. "
-        "Be concise, like a good caddie."
-        "Explain your advice based on the image and the context."
+    system_message = (
+        "You are an expert golf caddie. Analyze the given golf situation (and image if provided) "
+        "and offer concise, strategic, and helpful advice. Consider club selection, shot type, "
+        "and general strategy. Be encouraging and clear. If yardages are provided (both target "
+        "distance and user's club yardages), factor them into club selection. If no image is provided, "
+        "rely solely on the text description. Assume a right-handed golfer unless specified otherwise."
+        "Separate your output and organize it clearly so it's easily digestible"
     )
 
-    messages = [
-        {"role": "system", "content": caddie_persona},
-        {"role": "user", "content": []}
-    ]
-    
-    # Combine user context, club yardages, and distance to hole
-    full_user_input = f"Golfer's context: {user_context}{distance_info}\n\n{club_yardages_str}"
-    messages[1]["content"].append({"type": "text", "text": full_user_input})
+    ai_advice = get_ai_response(prompt, image_base64, system_message)
+    return ai_advice
 
-    if image_base64 and image_mimetype:
-        messages[1]["content"].append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:{image_mimetype};base64,{image_base64}"
-            }
-        })
-    else:
-        # If no image provided at all, tell the AI that.
-        messages[1]["content"].append({"type": "text", "text": "No image was provided, please provide general advice based on the text context."})
-
-    caddie_advice = "Caddie is thinking..." # Default message
-
-    try:
-        response = client.chat.completions.create(
-            model=AI_MODEL_NAME,
-            messages=messages,
-            max_tokens=300, # Limit response length
-        )
-        caddie_advice = response.choices[0].message.content
-
-    except Exception as e:
-        caddie_advice = f"Caddie's lost his focus! Error: {e}"
-        print(f"OpenAI API call error for /ask_caddie: {e}")
-
-    return render_template('shot_advice.html', 
-                           caddie_advice=caddie_advice, 
-                           user_context=user_context, 
-                           distance_to_hole=distance_to_hole_str, # Pass back to pre-fill form
-                           current_page='shot_advice')
-
-# --- Route for Swing Analysis Page (GET request to show the form) ---
-@app.route('/swing_analysis', methods=['GET']) # Changed route name from _page to be cleaner
+@app.route('/swing_analysis')
 def swing_analysis_page():
-    """Renders the swing analysis page."""
     return render_template('swing_analysis.html', current_page='swing_analysis')
 
-# --- Route to Process Swing Analysis (POST request to get feedback) ---
 @app.route('/process_swing_analysis', methods=['POST'])
 def process_swing_analysis():
-    """Handles the swing analysis form submission, sends data to AI, and displays feedback."""
-    user_context = request.form.get('context', '') # Any additional notes on the swing
-    image_base64 = None
-    image_mimetype = None
+    user_notes = request.form.get('notes', '').strip()
+    image_file = request.files.get('image_file')
+    camera_image_data = request.form.get('camera_image_data')
 
-    # --- Image Handling: Prioritize uploaded file over camera image ---
-    if 'uploaded_image' in request.files:
-        uploaded_file = request.files['uploaded_image']
-        if uploaded_file.filename != '':
-            try:
-                image_bytes = uploaded_file.read()
-                image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                image_mimetype = uploaded_file.mimetype
-            except Exception as e:
-                print(f"Error processing uploaded image for /process_swing_analysis: {e}")
+    image_base64 = encode_image(image_file) if image_file else None
+    if not image_base64 and camera_image_data:
+        image_base64 = encode_image(camera_image_data)
 
-    # If no file was uploaded, check for camera image data
-    if not image_base64 and 'camera_image_data' in request.form:
-        camera_data_url = request.form['camera_image_data']
-        if camera_data_url:
-            try:
-                header, base64_data = camera_data_url.split(',', 1)
-                image_mimetype = header.split(';')[0].split(':')[1]
-                image_base64 = base64_data
-            except Exception as e:
-                print(f"Error processing camera image data for /process_swing_analysis: {e}")
-                image_base64 = None
+    if not image_base64:
+        return "<p class='error-message'>Please provide an image for swing analysis.</p>", 400
     
-    # --- Specific prompt for Swing Analysis ---
-    swing_caddie_persona_and_task = (
-        "You are a professional golf instructor and caddie. "
-        "You are reviewing a golfer's swing captured in an image. "
-        "Analyze the posture, club position (if visible), and overall swing mechanics. "
-        "Provide constructive feedback, focusing on 1-2 key areas for improvement. "
-        "Offer a specific, actionable tip. "
-        "Remember, you're observing a *still image*, so focus on what can be inferred visually."
+    prompt = "Please analyze the golf swing in the image. Provide constructive feedback and tips for improvement. "
+    if user_notes:
+        prompt += f"The user noted: '{user_notes}'. Consider this in your analysis."
+    prompt += "Assume a right-handed golfer unless the image clearly indicates otherwise."
+
+    system_message = (
+        "You are an expert golf swing coach. Analyze the provided image (and notes if provided) "
+        "of a golf swing. Provide constructive feedback, identify potential areas for improvement, "
+        "and suggest drills or adjustments. Be encouraging and clear."
     )
 
-    messages = [
-        {"role": "system", "content": swing_caddie_persona_and_task},
-        {"role": "user", "content": []}
-    ]
-    messages[1]["content"].append({"type": "text", "text": f"Golfer's notes on swing: {user_context}"})
+    ai_analysis = get_ai_response(prompt, image_base64, system_message)
+    return ai_analysis
 
-    if image_base64 and image_mimetype:
-        messages[1]["content"].append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:{image_mimetype};base64,{image_base64}"
-            }
-        })
-    else:
-        # If no image provided at all, tell the AI that.
-        messages[1]["content"].append({"type": "text", "text": "No image was provided, please provide general advice based on the text context."})
-
-
-    swing_feedback = "Caddie is studying your swing..." # Default message
-
-    try:
-        response = client.chat.completions.create(
-            model=AI_MODEL_NAME,
-            messages=messages,
-            max_tokens=400, # Allow a bit more detail for swing feedback
-        )
-        swing_feedback = response.choices[0].message.content
-
-    except Exception as e:
-        swing_feedback = f"Caddie missed that swing! Error: {e}"
-        print(f"OpenAI API call error for /process_swing_analysis: {e}")
-
-    return render_template('swing_analysis.html', swing_feedback=swing_feedback, user_context=user_context, current_page='swing_analysis')
-
-
-# --- New Routes for Course Management ---
-@app.route('/courses', methods=['GET'])
-def list_courses():
-    courses = Course.query.all()
-    return render_template('list_courses.html', courses=courses, current_page='courses')
-
-@app.route('/courses/new', methods=['GET', 'POST'])
-def add_course():
-    if request.method == 'POST':
-        name = request.form['name']
-        # Pars are expected as a comma-separated string, e.g., "4,4,3,5..."
-        pars_str = request.form['pars'].strip()
-        
-        # Basic validation for pars
-        try:
-            # Ensure it's a comma-separated list of numbers
-            pars_list = [int(p.strip()) for p in pars_str.split(',') if p.strip()]
-            if not (1 <= len(pars_list) <= 18): # Ensure 1 to 18 holes
-                 flash('Please enter par values for 1 to 18 holes.', 'danger')
-                 return render_template('add_course.html', current_page='add_course', default_pars=pars_str)
-            if not all(1 <= p <= 6 for p in pars_list): # Typical par values
-                flash('Par values should be between 1 and 6.', 'danger')
-                return render_template('add_course.html', current_page='add_course', default_pars=pars_str)
-
-        except ValueError:
-            flash('Invalid par format. Please use comma-separated numbers (e.g., "4,4,3,5").', 'danger')
-            return render_template('add_course.html', current_page='add_course', default_pars=pars_str)
-
-        existing_course = Course.query.filter_by(name=name).first()
-        if existing_course:
-            flash(f'Course "{name}" already exists!', 'warning')
-        else:
-            new_course = Course(name=name, par_string=pars_str)
-            db.session.add(new_course)
-            db.session.commit()
-            flash(f'Course "{name}" added successfully!', 'success')
-            return redirect(url_for('list_courses'))
-    
-    # Pre-fill pars with a typical 18-hole par sequence for convenience
-    default_pars = '4,4,3,5,4,4,3,5,4,4,3,5,4,4,3,5,4,4'
-    return render_template('add_course.html', current_page='add_course', default_pars=default_pars)
-
-
-# --- New Routes for Club Yardage Management ---
 @app.route('/input_yardages', methods=['GET', 'POST'])
 def input_yardages():
     user_identifier = session.get('user_id')
     if not user_identifier:
-        flash("Please set a user ID (or log in) to save yardages.", "danger")
-        return redirect(url_for('index')) # Redirect to home if no user_id
+        flash("Please set a user ID (or log in) to input yardages.", "danger")
+        return redirect(url_for('index'))
 
     if request.method == 'POST':
-        # Delete existing yardages for this user to simplify updates
-        UserClubYardage.query.filter_by(user_identifier=user_identifier).delete()
-        db.session.commit() # Commit deletion first
-
         for club in COMMON_CLUBS:
-            # Generate the expected form field name (e.g., 'sand_wedge')
-            field_name = club.replace(" ", "_").lower()
-            yardage_str = request.form.get(field_name, '').strip()
-
+            club_input_name = club.replace('-', '_').lower().replace(' ', '_') # Handle hyphens and spaces
+            yardage_str = request.form.get(club_input_name)
+            
             if yardage_str and yardage_str.isdigit():
                 yardage = int(yardage_str)
-                if 0 < yardage < 500: # Basic sensible range for yardages
-                    new_yardage_entry = UserClubYardage(
-                        user_identifier=user_identifier,
-                        club_name=club,
-                        yardage=yardage
-                    )
-                    db.session.add(new_yardage_entry)
+                if not (0 <= yardage <= 499): # Validate range
+                    flash(f"Yardage for {club} must be between 0 and 499.", "warning")
+                    continue # Skip this club but continue processing others
+
+                existing_yardage = UserClubYardage.query.filter_by(user_identifier=user_identifier, club_name=club).first()
+                if existing_yardage:
+                    existing_yardage.yardage = yardage
                 else:
-                    flash(f"Invalid yardage for {club}: '{yardage_str}'. Must be a number between 1 and 499.", 'warning')
-            elif yardage_str: # Not empty but not a digit
-                 flash(f"Invalid input for {club}: '{yardage_str}'. Please enter a number.", 'warning')
+                    new_yardage = UserClubYardage(user_identifier=user_identifier, club_name=club, yardage=yardage)
+                    db.session.add(new_yardage)
+            else:
+                existing_yardage = UserClubYardage.query.filter_by(user_identifier=user_identifier, club_name=club).first()
+                if existing_yardage:
+                    db.session.delete(existing_yardage)
         
         try:
             db.session.commit()
-            flash('Your club yardages have been saved!', 'success')
-            return redirect(url_for('view_yardages'))
+            flash("Your club yardages have been saved!", "success")
         except Exception as e:
             db.session.rollback()
-            flash(f"Error saving yardages: {e}", 'danger')
-            print(f"Error saving yardages: {e}")
+            app_logger.error(f"Error saving yardages: {e}")
+            flash(f"An error occurred while saving yardages. Please try again.", "danger")
+        
+        return redirect(url_for('input_yardages')) # Redirect to GET to show updated data
 
-
-    # GET request: Display the form
-    # Load existing yardages for the current user
-    # Convert list of objects to a dictionary for easy template access
-    existing_yardage_objects = UserClubYardage.query.filter_by(user_identifier=user_identifier).all()
-    current_yardages_dict = {yc.club_name: yc.yardage for yc in existing_yardage_objects}
+    # For GET request, display current yardages
+    current_yardage_objects = UserClubYardage.query.filter_by(user_identifier=user_identifier).all()
+    current_yardages = {y.club_name: y.yardage for y in current_yardage_objects}
 
     return render_template('input_yardages.html', 
                            clubs=COMMON_CLUBS, 
-                           current_yardages=current_yardages_dict,
+                           current_yardages=current_yardages,
                            current_page='input_yardages')
 
 @app.route('/view_yardages')
@@ -412,24 +291,65 @@ def view_yardages():
 
     yardage_objects = UserClubYardage.query.filter_by(user_identifier=user_identifier).order_by(UserClubYardage.club_name).all()
     
-    # Sort clubs in a custom order if desired, otherwise alphabetical by club_name
-    # For now, let's keep it simple and just use the retrieved order or alphabetical
-    
-    # You could re-sort based on COMMON_CLUBS order for a consistent display
-    sorted_yardages = {club: None for club in COMMON_CLUBS}
-    for obj in yardage_objects:
-        sorted_yardages[obj.club_name] = obj.yardage
+    # Sort clubs in a custom order for consistent display
+    display_yardages = {}
+    for club in COMMON_CLUBS:
+        for obj in yardage_objects:
+            if obj.club_name == club:
+                display_yardages[club] = obj.yardage
+                break # Found the club, move to next in COMMON_CLUBS
     
     # Filter out clubs that don't have a yardage (or were not in COMMON_CLUBS for some reason)
-    display_yardages = {club: yardage for club, yardage in sorted_yardages.items() if yardage is not None}
+    # This ensures only clubs with data are passed, in the correct order
+    final_display_yardages = {club: yardage for club, yardage in display_yardages.items() if yardage is not None}
 
     return render_template('view_yardages.html', 
-                           yardages=display_yardages,
+                           yardages=final_display_yardages,
                            common_clubs_order=COMMON_CLUBS, # Pass this to maintain order in display
                            current_page='view_yardages')
 
+@app.route('/add_course', methods=['GET', 'POST'])
+def add_course():
+    if request.method == 'POST':
+        course_name = request.form.get('name', '').strip()
+        pars_string = request.form.get('pars', '').strip()
+
+        if not course_name:
+            flash("Course name is required.", "danger")
+            return render_template('add_course.html', current_page='add_course', default_pars=pars_string)
+
+        pars_list = [p.strip() for p in pars_string.split(',') if p.strip().isdigit()]
+        
+        if len(pars_list) != 18:
+            flash("Please enter exactly 18 par values, separated by commas (e.g., 4,4,3,...).", "danger")
+            return render_template('add_course.html', current_page='add_course', default_pars=pars_string)
+
+        try:
+            # Check for existing course name
+            existing_course = Course.query.filter_by(name=course_name).first()
+            if existing_course:
+                flash(f"A course named '{course_name}' already exists. Please choose a different name.", "warning")
+                return render_template('add_course.html', current_page='add_course', default_pars=pars_string)
+
+            new_course = Course(name=course_name, par_string=','.join(pars_list))
+            db.session.add(new_course)
+            db.session.commit()
+            flash(f"Course '{course_name}' added successfully!", "success")
+            return redirect(url_for('list_courses'))
+        except Exception as e:
+            db.session.rollback()
+            app_logger.error(f"Error adding course: {e}")
+            flash(f"An unexpected error occurred while adding the course. Please try again.", "danger")
+            return render_template('add_course.html', current_page='add_course', default_pars=pars_string)
+
+    return render_template('add_course.html', current_page='add_course')
+
+@app.route('/list_courses')
+def list_courses():
+    courses = Course.query.order_by(Course.name).all()
+    return render_template('list_courses.html', courses=courses, current_page='courses')
+
 if __name__ == '__main__':
-    # It's good practice to create tables within the app context before running
     with app.app_context():
-        db.create_all()
-    app.run(debug=True, port=8000)
+        db.create_all() # Ensure tables are created
+    app.run(debug=True)

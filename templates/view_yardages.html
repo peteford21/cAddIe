@@ -1,46 +1,39 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Club Yardages - Golf Caddie</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <h1>Your Saved Club Yardages</h1>
+{% extends 'base.html' %}
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="flashes">
-                    {% for category, message in messages %}
-                        <li class="{{ category }}">{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
+{% block title %}AI Golf Caddie: Your Club Yardages{% endblock %}
 
-        {% if yardages %}
-            <div class="yardage-list">
-                {% for club in common_clubs_order %}
-                    {% if yardages[club] is defined and yardages[club] is not none %}
-                        <div class="yardage-item">
-                            <span class="club-name">{{ club }}:</span>
-                            <span class="yardage-value">{{ yardages[club] }} yards</span>
-                        </div>
-                    {% endif %}
+{% block content %}
+    <h2>Your Saved Club Yardages</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flash-messages">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
                 {% endfor %}
-            </div>
-        {% else %}
-            <p class="no-data">No yardages saved yet. Go to "Input Club Yardages" to add them.</p>
+            </ul>
         {% endif %}
+    {% endwith %}
 
-        <div class="button-group">
-            <button onclick="window.location.href='{{ url_for('input_yardages') }}'" class="btn btn-primary">Edit Yardages</button>
+    {% if yardages %}
+        <div class="yardage-list">
+            {% for club in common_clubs_order %}
+                {% if yardages[club] is defined and yardages[club] is not none %}
+                    <div class="yardage-item">
+                        <span class="club-name">{{ club }}:</span>
+                        <span class="yardage-value">{{ yardages[club] }} yards</span>
+                    </div>
+                {% endif %}
+            {% endfor %}
         </div>
-        <div class="links-group">
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
-        </div>
+    {% else %}
+        <p class="no-data">No yardages saved yet. Go to "Input Club Yardages" to add them.</p>
+    {% endif %}
+
+    <div class="button-group">
+        <button onclick="window.location.href='{{ url_for('input_yardages') }}'" class="btn btn-primary">Edit Yardages</button>
     </div>
-</body>
-</html>
+    <div class="links-group">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
+    </div>
+{% endblock %}
