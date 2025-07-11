@@ -1,245 +1,147 @@
 {% extends 'base.html' %}
 
-{% block title %}AI Golf Caddie: Shot Advice{% endblock %}
+{% block title %}Shot Advice - AI Golf Caddie{% endblock %}
 
 {% block content %}
-    <h2>Shot Situation Advice</h2>
-    <p>Capture a picture of your ball's lie or upload one, and tell the AI caddie the situation!</p>
+<h1><i class="fas fa-bullseye"></i> Get Shot Advice</h1>
+<p>Describe your situation, provide an image of your lie, and let the AI caddie help you choose the best shot.</p>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <ul class="flash-messages">
-                {% for category, message in messages %}
-                    <li class="{{ category }}">{{ message }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
-
-    <form id="shotAdviceForm" action="{{ url_for('ask_caddie') }}" method="post" enctype="multipart/form-data">
-
-        <div class="input-option">
-            <h3>Option 1: Take a new picture with your camera</h3>
-            <div class="camera-controls">
-                <button type="button" id="startCameraButton" class="btn btn-primary">Start Camera</button>
-                <button type="button" id="takePhotoButton" disabled class="btn btn-primary">Take Photo</button>
-                <button type="button" id="clearPhotoButton" disabled class="btn btn-secondary">Clear Photo</button>
+<div class="analysis-container">
+    <div class="form-container">
+        <h3>Your Situation</h3>
+        <form id="adviceForm" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="yardage">Distance to Target (Yards)</label>
+                <input type="number" id="yardage" name="yardage" placeholder="e.g., 150">
             </div>
-            <video id="video-stream" autoplay playsinline></video>
-            <canvas id="photo-canvas"></canvas>
-            <p class="captured-image-display" id="captured-image-message">Image captured! It will be sent with your request.</p>
-            <input type="hidden" name="camera_image_data" id="cameraImageDataInput">
-        </div>
 
-        <div class="input-option">
-            <h3>Option 2: Upload an existing picture</h3>
-            <div class="file-upload-wrapper">
-                <input type="file" id="uploadedFileInput" name="image_file" accept="image/*">
-                <button type="button" class="custom-file-upload-button btn btn-info">Choose File</button>
+            <div class="form-group">
+                <label for="situation">Describe the Lie and Conditions</label>
+                <textarea id="situation" name="situation" rows="4" placeholder="e.g., Ball is in thick rough, slightly downhill lie. Wind is left-to-right."></textarea>
             </div>
-            <p class="file-name-display" id="fileNameDisplay">No file chosen</p>
-        </div>
-        
-        <label for="situation">Describe the situation:</label>
-        <textarea id="situation" name="situation" rows="5" placeholder="e.g., 'I'm in the rough, slightly uphill lie. Green slopes front to back.'"></textarea>
 
-        <label for="yardage">Yardage to the target (in yards):</label>
-        <input type="number" id="yardage" name="yardage" placeholder="e.g., 150" min="0" max="999">
+            <div class="form-group">
+                <label for="image_file">Upload Image of Lie (Optional)</label>
+                <input type="file" id="image_file" name="image_file" accept="image/*" onchange="previewImage(event)">
+                <img id="imagePreview" class="image-preview" src="" alt="Image Preview" style="display: none;">
+            </div>
+            
+            <div class="form-group">
+                 <label for="camera_image_data">Or Use Camera</label>
+                 <button type="button" id="startCameraButton" class="btn btn-secondary"><i class="fas fa-camera"></i> Start Camera</button>
+                 <video id="video-stream" autoplay playsinline style="display:none; width: 100%; border-radius: 8px; margin-top: 1rem;"></video>
+                 <canvas id="photo-canvas" style="display:none;"></canvas>
+                 <input type="hidden" name="camera_image_data" id="cameraImageDataInput">
+            </div>
 
-        <div class="button-group">
-            <button type="submit" class="btn btn-success">Get Caddie Advice</button>
-        </div>
-    </form>
-
-    <div class="loading-spinner" id="loadingSpinner" style="display: none;">
-        <div class="spinner"></div>
-        <p>Getting AI Caddie Advice...</p>
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-lightbulb"></i> Get Advice</button>
+            </div>
+        </form>
     </div>
 
-    <div class="ai-response-box" id="responseBox" style="display: none;">
-        <h2>Caddie's Advice:</h2>
-        <p id="caddieAdvice"></p>
+    <div class="response-container">
+        <h3><i class="fas fa-clipboard-list"></i> Caddie's Recommendation</h3>
+        <div id="loadingSpinner" class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Analyzing your situation...</p>
+        </div>
+        <div id="aiResponse" class="ai-response-content">
+            <p>Your caddie's advice will appear here once you submit your situation.</p>
+        </div>
     </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const videoStream = document.getElementById('video-stream');
-            const photoCanvas = document.getElementById('photo-canvas');
-            const context = photoCanvas.getContext('2d');
-            const startCameraButton = document.getElementById('startCameraButton');
-            const takePhotoButton = document.getElementById('takePhotoButton');
-            const clearPhotoButton = document.getElementById('clearPhotoButton');
-            const cameraImageDataInput = document.getElementById('cameraImageDataInput');
-            const capturedImageMessage = document.getElementById('captured-image-message');
-            const uploadedFileInput = document.getElementById('uploadedFileInput');
-            const fileNameDisplay = document.getElementById('fileNameDisplay');
-            const customFileUploadButton = document.querySelector('.custom-file-upload-button');
-            const shotAdviceForm = document.getElementById('shotAdviceForm');
-            const loadingSpinner = document.getElementById('loadingSpinner');
-            const responseBox = document.getElementById('responseBox');
-            const caddieAdviceParagraph = document.getElementById('caddieAdvice');
+<script>
+    function previewImage(event) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            const output = document.getElementById('imagePreview');
+            output.src = reader.result;
+            output.style.display = 'block';
+        };
+        reader.readAsDataURL(event.target.files[0]);
+    }
 
-            let stream; // To hold the camera stream
+    document.addEventListener('DOMContentLoaded', function() {
+        const adviceForm = document.getElementById('adviceForm');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const aiResponse = document.getElementById('aiResponse');
+        
+        const startCameraButton = document.getElementById('startCameraButton');
+        const videoStream = document.getElementById('video-stream');
+        const cameraImageDataInput = document.getElementById('cameraImageDataInput');
+        const photoCanvas = document.getElementById('photo-canvas');
+        let stream;
 
-            // Function to reset all input elements and hide messages
-            function resetFormInputs() {
+        startCameraButton.addEventListener('click', async () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
                 videoStream.style.display = 'none';
-                photoCanvas.style.display = 'none';
-                capturedImageMessage.style.display = 'none';
-                cameraImageDataInput.value = '';
-                uploadedFileInput.value = ''; // Clear file input
-                fileNameDisplay.textContent = 'No file chosen';
-                startCameraButton.disabled = false;
-                takePhotoButton.disabled = true;
-                clearPhotoButton.disabled = true;
-                uploadedFileInput.disabled = false;
-                customFileUploadButton.classList.remove('disabled');
-
-                // Reset text area and yardage input
-                document.getElementById('situation').value = '';
-                document.getElementById('yardage').value = ''; // Reset the yardage input
-                
-                responseBox.style.display = 'none'; // Hide advice box on new load/reset
-                loadingSpinner.style.display = 'none'; // Ensure spinner is hidden
+                startCameraButton.innerHTML = '<i class="fas fa-camera"></i> Start Camera';
+                stream = null;
+                return;
             }
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                videoStream.srcObject = stream;
+                videoStream.style.display = 'block';
+                startCameraButton.innerHTML = '<i class="fas fa-camera-rotate"></i> Capture & Close';
+                
+                videoStream.onclick = () => {
+                    photoCanvas.width = videoStream.videoWidth;
+                    photoCanvas.height = videoStream.videoHeight;
+                    const context = photoCanvas.getContext('2d');
+                    context.drawImage(videoStream, 0, 0, photoCanvas.width, photoCanvas.height);
+                    const imageDataUrl = photoCanvas.toDataURL('image/jpeg');
+                    cameraImageDataInput.value = imageDataUrl;
+                    
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = imageDataUrl;
+                    preview.style.display = 'block';
 
-            // Initial reset when the page loads
-            resetFormInputs();
-
-            startCameraButton.addEventListener('click', async () => {
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                    videoStream.srcObject = stream;
-                    videoStream.style.display = 'block';
-                    startCameraButton.disabled = true;
-                    takePhotoButton.disabled = false;
-                    uploadedFileInput.disabled = true; // Disable file upload when camera is active
-                    customFileUploadButton.classList.add('disabled');
-                    flashMessage("Camera started! Aim at the ball and take a photo.", "info");
-                } catch (err) {
-                    console.error("Error accessing camera: ", err);
-                    flashMessage("Could not start camera. Please ensure camera access is granted.", "danger");
-                }
-            });
-
-            takePhotoButton.addEventListener('click', () => {
-                photoCanvas.width = videoStream.videoWidth;
-                photoCanvas.height = videoStream.videoHeight;
-                context.drawImage(videoStream, 0, 0, photoCanvas.width, photoCanvas.height);
-                const imageDataUrl = photoCanvas.toDataURL('image/jpeg');
-                cameraImageDataInput.value = imageDataUrl;
-                videoStream.style.display = 'none';
-                photoCanvas.style.display = 'block';
-                capturedImageMessage.style.display = 'block';
-                takePhotoButton.disabled = true;
-                clearPhotoButton.disabled = false;
-
-                if (stream) {
                     stream.getTracks().forEach(track => track.stop());
-                }
-                flashMessage("Photo taken! You can clear it or get advice.", "success");
-            });
+                    videoStream.style.display = 'none';
+                    startCameraButton.innerHTML = '<i class="fas fa-camera"></i> Retake';
+                    stream = null;
+                };
 
-            clearPhotoButton.addEventListener('click', () => {
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
-                resetFormInputs();
-                flashMessage("Photo cleared. You can take a new one or upload a file.", "info");
-            });
-
-            // Handle file input change for displaying file name
-            uploadedFileInput.addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    fileNameDisplay.textContent = this.files[0].name;
-                    // If a file is selected, disable camera options
-                    startCameraButton.disabled = true;
-                    takePhotoButton.disabled = true;
-                    clearPhotoButton.disabled = false; // Allow clearing file input
-                    // Clear any existing camera data if a file is chosen
-                    cameraImageDataInput.value = '';
-                    capturedImageMessage.style.display = 'none';
-                    if (stream) { // Stop camera if it was active
-                        stream.getTracks().forEach(track => track.stop());
-                        videoStream.style.display = 'none';
-                    }
-                    photoCanvas.style.display = 'none';
-                } else {
-                    fileNameDisplay.textContent = 'No file chosen';
-                    // Re-enable camera options if file is unselected, assuming no camera image was taken
-                    if (!cameraImageDataInput.value) {
-                         startCameraButton.disabled = false;
-                    }
-                    clearPhotoButton.disabled = true; // No photo/file to clear
-                }
-            });
-
-            // Trigger click on hidden file input when custom button is clicked
-            customFileUploadButton.addEventListener('click', function() {
-                if (!uploadedFileInput.disabled) {
-                    uploadedFileInput.click();
-                }
-            });
-
-            // Form submission handling with Fetch API
-            shotAdviceForm.addEventListener('submit', async function(event) {
-                event.preventDefault(); // Prevent default form submission
-
-                // Hide previous response and show loading spinner
-                responseBox.style.display = 'none';
-                loadingSpinner.style.display = 'flex'; // Use flex to center spinner and text
-
-                const formData = new FormData(this); // 'this' refers to the form
-
-                // If camera data exists, append it to formData and remove file input data
-                if (cameraImageDataInput.value) {
-                    formData.append('camera_image_data', cameraImageDataInput.value);
-                    formData.delete('image_file'); // Remove the file input if camera image is used
-                } else if (uploadedFileInput.files.length > 0) {
-                    // If a file is uploaded, formData already contains it
-                } else {
-                    // No image provided
-                    loadingSpinner.style.display = 'none';
-                    caddieAdviceParagraph.innerHTML = '<p class="error-message">Please provide a situation description or an image.</p>';
-                    responseBox.style.display = 'block';
-                    return;
-                }
-
-                try {
-                    const response = await fetch(this.action, {
-                        method: this.method,
-                        body: formData
-                    });
-
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-                    }
-
-                    const htmlResponse = await response.text();
-                    caddieAdviceParagraph.innerHTML = htmlResponse; // Insert the raw HTML from response
-                    responseBox.style.display = 'block'; // Show the advice box
-                } catch (error) {
-                    console.error('Error fetching caddie advice:', error);
-                    caddieAdviceParagraph.innerHTML = '<p class="error-message">Error getting advice. Please try again.</p>';
-                    responseBox.style.display = 'block'; // Show the advice box even on error
-                } finally {
-                    loadingSpinner.style.display = 'none'; // Hide loading spinner
-                    // Clear the file input and camera data after submission, forcing a new selection next time
-                    uploadedFileInput.value = '';
-                    fileNameDisplay.textContent = 'No file chosen';
-                    cameraImageDataInput.value = '';
-                    capturedImageMessage.style.display = 'none';
-                    // Re-enable camera start if no camera image was used, or if camera image was cleared
-                    if (!cameraImageDataInput.value) {
-                         startCameraButton.disabled = false;
-                    }
-                    // Re-enable file input if it was disabled by camera, assuming it's clear now
-                    uploadedFileInput.disabled = false;
-                }
-            });
+            } catch (err) {
+                console.error("Camera Error: ", err);
+                aiResponse.innerHTML = "<p class='error-message'>Could not access the camera.</p>";
+            }
         });
-    </script>
+
+
+        adviceForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            loadingSpinner.style.display = 'block';
+            aiResponse.innerHTML = '';
+
+            const formData = new FormData(this);
+
+            try {
+                const response = await fetch("{{ url_for('shot_advice') }}", {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const htmlResponse = await response.text();
+                aiResponse.innerHTML = htmlResponse;
+
+            } catch (error) {
+                console.error('Error fetching advice:', error);
+                aiResponse.innerHTML = '<p class="flash-message flash-danger">Failed to get advice. Please try again.</p>';
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        });
+    });
+</script>
 {% endblock %}

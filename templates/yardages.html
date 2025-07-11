@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}My Club Yardages - AI Golf Caddie{% endblock %}
+
+{% block content %}
+<h1><i class="fas fa-ruler-combined"></i> My Club Yardages</h1>
+<p>Enter your average carry distance for each club. This will help the AI Caddie give you more accurate advice.</p>
+
+<form action="{{ url_for('yardages') }}" method="post">
+    <div class="yardage-grid">
+        {% for club in clubs %}
+        <div class="club-input-item">
+            <label for="{{ club.replace('-', '_').lower().replace(' ', '_') }}">{{ club }}</label>
+            <input type="number" id="{{ club.replace('-', '_').lower().replace(' ', '_') }}"
+                   name="{{ club.replace('-', '_').lower().replace(' ', '_') }}"
+                   value="{{ current_yardages.get(club, '') }}"
+                   placeholder="Yards" min="0" max="500">
+        </div>
+        {% endfor %}
+    </div>
+    <div class="button-group">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Yardages</button>
+    </div>
+</form>
+{% endblock %}

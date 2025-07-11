@@ -4,34 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AI Golf Caddie{% endblock %}</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Teko:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h1>Your AI Golf Caddie</h1>
-        <p>Your ultimate on-course companion and swing coach.</p>
-
-        <div class="nav-links">
-            <a href="{{ url_for('index') }}" class="{{ 'active-nav-item' if current_page == 'home' else '' }}">Home</a>
-            <a href="{{ url_for('shot_advice_page') }}" class="{{ 'active-nav-item' if current_page == 'shot_advice' else '' }}">Shot Advice</a>
-            <a href="{{ url_for('swing_analysis_page') }}" class="{{ 'active-nav-item' if current_page == 'swing_analysis' else '' }}">Swing Analysis</a>
-            <a href="{{ url_for('list_courses') }}" class="{{ 'active-nav-item' if current_page == 'courses' or current_page == 'add_course' else '' }}">Manage Courses</a>
+    <header class="main-header">
+        <div class="logo">
+            <i class="fas fa-golf-ball-tee"></i>
+            <a href="{{ url_for('index') }}">AI Golf Caddie</a>
+        </div>
+        <nav class="main-nav">
+            <a href="{{ url_for('index') }}" class="{{ 'active' if current_page == 'home' else '' }}"><i class="fas fa-home"></i> Home</a>
+            <a href="{{ url_for('shot_advice') }}" class="{{ 'active' if current_page == 'shot_advice' else '' }}"><i class="fas fa-bullseye"></i> Shot Advice</a>
+            <a href="{{ url_for('swing_analysis') }}" class="{{ 'active' if current_page == 'swing_analysis' else '' }}"><i class="fas fa-video"></i> Swing Analysis</a>
+            <a href="{{ url_for('yardages') }}" class="{{ 'active' if current_page == 'yardages' else '' }}"><i class="fas fa-ruler-combined"></i> My Yardages</a>
+            <div class="nav-dropdown">
+                <button class="dropdown-btn {{ 'active' if current_page in ['track_round', 'rounds', 'courses'] else '' }}">
+                    <i class="fas fa-flag"></i> Game Data <i class="fas fa-caret-down"></i>
+                </button>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('track_round_start') }}" class="{{ 'active' if current_page == 'track_round' else '' }}">Track New Round</a>
+                    <a href="{{ url_for('list_rounds') }}" class="{{ 'active' if current_page == 'rounds' else '' }}">View Past Rounds</a>
+                    <a href="{{ url_for('list_courses') }}" class="{{ 'active' if current_page == 'courses' else '' }}">Manage Courses</a>
+                </div>
             </div>
+        </nav>
+    </header>
 
-        <hr> {# Using HR with CSS styling #}
-
+    <main class="container">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <ul class="flash-messages">
+                <div class="flash-messages">
                     {% for category, message in messages %}
-                        <li class="{{ category }}">{{ message }}</li>
+                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
                     {% endfor %}
-                </ul>
+                </div>
             {% endif %}
         {% endwith %}
 
         {% block content %}{% endblock %}
-    </div>
+    </main>
+
+    <footer class="main-footer">
+        <p>&copy; {{ now.year }} AI Golf Caddie. All Rights Reserved.</p>
+    </footer>
 
     {% block scripts %}{% endblock %}
 </body>

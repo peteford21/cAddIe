@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Live Scorecard - AI Golf Caddie{% endblock %}
+
+{% block content %}
+    <h1>Live Scorecard: {{ live_round.course.name }}</h1>
+    <p>Played on: {{ live_round.date_played.strftime('%B %d, %Y') }}</p>
+
+    <form action="{{ url_for('track_round_live', round_id=live_round.id) }}" method="post">
+        <div class="scorecard">
+            <table class="scorecard-table">
+                <thead>
+                    <tr>
+                        <th>Hole</th>
+                        {% for i in range(1, 10) %}<th>{{ i }}</th>{% endfor %}
+                        <th>Out</th>
+                        {% for i in range(10, 19) %}<th>{{ i }}</th>{% endfor %}
+                        <th>In</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Par</strong></td>
+                        {% set out_par = 0 %}
+                        {% for i in range(0, 9) %}{% set out_par = out_par + course_pars[i] %}<td>{{ course_pars[i] }}</td>{% endfor %}
+                        <td><strong>{{ out_par }}</strong></td>
+                        {% set in_par = 0 %}
+                        {% for i in range(9, 18) %}{% set in_par = in_par + course_pars[i] %}<td>{{ course_pars[i] }}</td>{% endfor %}
+                        <td><strong>{{ in_par }}</strong></td>
+                        <td><strong>{{ out_par + in_par }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Score</strong></td>
+                        {% set out_score = 0 %}
+                        {% for i in range(0, 9) %}
+                            <td><input type="number" name="hole_{{ i + 1 }}" value="{{ round_scores[i] }}" min="1"></td>
+                            {% if round_scores[i] %}{% set out_score = out_score + round_scores[i]|int %}{% endif %}
+                        {% endfor %}
+                        <td><strong>{{ out_score if out_score > 0 else '' }}</strong></td>
+                        {% set in_score = 0 %}
+                        {% for i in range(9, 18) %}
+                             <td><input type="number" name="hole_{{ i + 1 }}" value="{{ round_scores[i] }}" min="1"></td>
+                            {% if round_scores[i] %}{% set in_score = in_score + round_scores[i]|int %}{% endif %}
+                        {% endfor %}
+                        <td><strong>{{ in_score if in_score > 0 else '' }}</strong></td>
+                        <td><strong>{{ (out_score + in_score) if (out_score + in_score) > 0 else '' }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="button-group">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Scores</button>
+            <a href="{{ url_for('list_rounds') }}" class="btn btn-secondary">Back to Rounds List</a>
+        </div>
+    </form>
+    
+    <div class="button-group">
+         <form action="{{ url_for('delete_round', round_id=live_round.id) }}" method="post" onsubmit="return confirm('Are you sure you want to delete this entire round?');">
+            <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete This Round</button>
+        </form>
+    </div>
+{% endblock %}

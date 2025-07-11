@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}My Rounds - AI Golf Caddie{% endblock %}
+
+{% block content %}
+    <h1><i class="fas fa-history"></i> My Game History</h1>
+
+    {% if incomplete_round %}
+    <div class="flash-message flash-info">
+        You have an active round in progress at <strong>{{ incomplete_round.course.name }}</strong>.
+        <div class="button-group" style="margin-top: 1rem;">
+            <a href="{{ url_for('track_round_live', round_id=incomplete_round.id) }}" class="btn btn-primary"><i class="fas fa-play"></i> Resume Round</a>
+            <form action="{{ url_for('delete_round', round_id=incomplete_round.id) }}" method="post" onsubmit="return confirm('Are you sure you want to delete this unfinished round?');">
+                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete Round</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <h2>Completed Rounds</h2>
+    {% if completed_rounds %}
+        <ul class="data-list">
+            {% for round in completed_rounds %}
+                <li class="data-list-item">
+                    <div>
+                        <div class="item-info">{{ round.course.name }}</div>
+                        <div class="item-details">
+                            {{ round.date_played.strftime('%A, %B %d, %Y') }}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="item-info" style="font-size: 1.5rem;">
+                            {{ round.calculate_total_score() }}
+                            <span style="font-size: 1rem; color: #555;">
+                                ({% set score_par = round.calculate_score_to_par() %}
+                                {% if score_par > 0 %}+{% endif %}{{ score_par if score_par != 0 else 'E' }})
+                            </span>
+                        </div>
+                        <div class="item-actions">
+                            <form action="{{ url_for('delete_round', round_id=round.id) }}" method="post" onsubmit="return confirm('Are you sure you want to delete this round?');">
+                                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>You have no completed rounds. <a href="{{ url_for('track_round_start') }}">Start a new round</a> to build your history!</p>
+    {% endif %}
+{% endblock %}

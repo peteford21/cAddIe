@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Track a Round - AI Golf Caddie{% endblock %}
+
+{% block content %}
+    <h1><i class="fas fa-flag-checkered"></i> Track a New Round</h1>
+    <p>Select a course to begin your round. If your course isn't listed, please add it first.</p>
+
+    <div style="max-width: 600px; margin: 2rem auto;">
+        {% if courses %}
+            <form action="{{ url_for('track_round_start') }}" method="post">
+                <div class="form-group">
+                    <label for="course_id">Choose Your Course</label>
+                    <select id="course_id" name="course_id" class="form-control" style="padding: 0.8rem; font-size: 1.1rem; border-radius: 8px;">
+                        {% for course in courses %}
+                            <option value="{{ course.id }}">{{ course.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary" style="font-size: 1.2rem; padding: 1rem 2rem;"><i class="fas fa-play-circle"></i> Start Round</button>
+                </div>
+            </form>
+        {% else %}
+            <div class="flash-message flash-warning">
+                You haven't added any courses yet.
+                <a href="{{ url_for('list_courses') }}" style="text-decoration: underline; color: inherit;">Add a course</a> to start tracking a round.
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

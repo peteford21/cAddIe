@@ -1,34 +1,48 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Golf AI Caddie</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <h1>Welcome to Golf AI Caddie!</h1>
-        <p>Your personal assistant for shot advice, swing analysis, and game tracking.</p>
+{% extends 'base.html' %}
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="flash-messages"> {# Changed to flash-messages for consistent styling #}
-                    {% for category, message in messages %}
-                        <li class="{{ category }}">{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
+{% block title %}Welcome - AI Golf Caddie{% endblock %}
 
-        <div class="button-group">
-            <a href="{{ url_for('shot_advice_page') }}" class="btn btn-menu {{ 'active' if current_page == 'shot_advice' }}">Get Shot Advice</a>
-            <a href="{{ url_for('swing_analysis_page') }}" class="btn btn-menu {{ 'active' if current_page == 'swing_analysis' }}">Analyze Your Swing</a>
-            <a href="{{ url_for('input_yardages') }}" class="btn btn-menu {{ 'active' if current_page == 'input_yardages' }}">Input Club Yardages</a>
-            <a href="{{ url_for('view_yardages') }}" class="btn btn-menu {{ 'active' if current_page == 'view_yardages' }}">View Your Yardages</a>
-            <a href="{{ url_for('list_courses') }}" class="btn btn-menu {{ 'active' if current_page == 'courses' }}">Manage Courses</a>
-            <a href="#" class="btn btn-menu disabled">(Future: Track a Round)</a>
-        </div>
+{% block content %}
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <h1>Your On-Course Partner</h1>
+        <p style="font-size: 1.2rem; color: #555;">Get professional-level insights for every part of your game.</p>
     </div>
-</body>
-</html>
+
+    <div class="feature-grid">
+        <a href="{{ url_for('shot_advice') }}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <i class="fas fa-bullseye"></i>
+            <h3>Shot Advice</h3>
+            <p>Get instant recommendations for club selection and strategy based on your lie and distance.</p>
+        </a>
+
+        <a href="{{ url_for('swing_analysis') }}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <i class="fas fa-video"></i>
+            <h3>Swing Analysis</h3>
+            <p>Upload a photo of your swing to receive expert feedback and personalized drills.</p>
+        </a>
+
+        <a href="{{ url_for('track_round_start') }}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <i class="fas fa-flag-checkered"></i>
+            <h3>Track a Round</h3>
+            <p>Keep score during your round with a live scorecard and save your game history.</p>
+        </a>
+
+        <a href="{{ url_for('yardages') }}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <i class="fas fa-ruler-combined"></i>
+            <h3>My Yardages</h3>
+            <p>Log your personal club distances to get more accurate caddie advice.</p>
+        </a>
+
+        <a href="{{ url_for('list_rounds') }}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <i class="fas fa-history"></i>
+            <h3>Game History</h3>
+            <p>Review your past rounds and track your progress over time.</p>
+        </a>
+        
+        <a href="{{ url_for('list_courses') }}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <i class="fas fa-map-marked-alt"></i>
+            <h3>Manage Courses</h3>
+            <p>Add and manage the courses you play, including par information for accurate scoring.</p>
+        </a>
+    </div>
+{% endblock %}
