@@ -6,20 +6,84 @@
 <h1><i class="fas fa-ruler-combined"></i> My Club Yardages</h1>
 <p>Enter your average carry distance for each club. This will help the AI Caddie give you more accurate advice.</p>
 
-<form action="{{ url_for('yardages') }}" method="post">
-    <div class="yardage-grid">
-        {% for club in clubs %}
-        <div class="club-input-item">
-            <label for="{{ club.replace('-', '_').lower().replace(' ', '_') }}">{{ club }}</label>
-            <input type="number" id="{{ club.replace('-', '_').lower().replace(' ', '_') }}"
-                   name="{{ club.replace('-', '_').lower().replace(' ', '_') }}"
-                   value="{{ current_yardages.get(club, '') }}"
-                   placeholder="Yards" min="0" max="500">
-        </div>
-        {% endfor %}
+<div class="analysis-container">
+    <div class="form-container">
+        <h3>Enter Distances</h3>
+        <form action="{{ url_for('yardages') }}" method="post">
+            <div class="yardage-grid">
+                {% for club in clubs %}
+                <div class="club-input-item">
+                    <label for="{{ club.replace('-', '_').lower().replace(' ', '_') }}">{{ club }}</label>
+                    <input type="number" id="{{ club.replace('-', '_').lower().replace(' ', '_') }}"
+                           name="{{ club.replace('-', '_').lower().replace(' ', '_') }}"
+                           value="{{ current_yardages.get(club, '') }}"
+                           placeholder="Yards" min="0" max="500">
+                </div>
+                {% endfor %}
+            </div>
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Yardages</button>
+            </div>
+        </form>
     </div>
-    <div class="button-group">
-        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Yardages</button>
+
+    <div class="response-container">
+        <h3><i class="fas fa-chart-bar"></i> Club Gapping</h3>
+        {% if chart_data.labels %}
+            <div class="chart-container" style="position: relative; height:60vh; width:100%">
+                <canvas id="gappingChart"></canvas>
+            </div>
+        {% else %}
+            <p>Enter some yardages to see your club gapping chart here.</p>
+        {% endif %}
     </div>
-</form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chartData = {{ chart_data | tojson }};
+    if (chartData && chartData.labels && chartData.labels.length > 0) {
+        const ctx = document.getElementById('gappingChart').getContext('2d');
+        const gappingChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'Carry Distance (Yards)',
+                    data: chartData.values,
+                    backgroundColor: 'rgba(0, 100, 0, 0.6)',
+                    borderColor: 'rgba(0, 100, 0, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y', // To make it a horizontal bar chart
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Club Carry Distances'
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Yards'
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

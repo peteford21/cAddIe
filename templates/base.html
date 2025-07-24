@@ -25,12 +25,13 @@
             <a href="{{ url_for('swing_analysis') }}" class="{{ 'active' if current_page == 'swing_analysis' else '' }}"><i class="fas fa-video"></i> Swing Analysis</a>
             <a href="{{ url_for('yardages') }}" class="{{ 'active' if current_page == 'yardages' else '' }}"><i class="fas fa-ruler-combined"></i> My Yardages</a>
             <div class="nav-dropdown">
-                <button class="dropdown-btn {{ 'active' if current_page in ['track_round', 'rounds', 'courses'] else '' }}">
+                <button class="dropdown-btn {{ 'active' if current_page in ['track_round', 'rounds', 'courses', 'achievements'] else '' }}">
                     <i class="fas fa-flag"></i> Game Data <i class="fas fa-caret-down"></i>
                 </button>
                 <div class="dropdown-content">
                     <a href="{{ url_for('track_round_start') }}" class="{{ 'active' if current_page == 'track_round' else '' }}">Track New Round</a>
                     <a href="{{ url_for('list_rounds') }}" class="{{ 'active' if current_page == 'rounds' else '' }}">View Past Rounds</a>
+                    <a href="{{ url_for('achievements') }}" class="{{ 'active' if current_page == 'achievements' else '' }}">My Achievements</a>
                     <a href="{{ url_for('list_courses') }}" class="{{ 'active' if current_page == 'courses' else '' }}">Manage Courses</a>
                 </div>
             </div>

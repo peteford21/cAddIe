@@ -372,6 +372,33 @@ textarea {
     display: inline;
 }
 
+/* Handicap Display */
+.handicap-display {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+.handicap-display h3 {
+    color: white;
+    margin: 0;
+    font-size: 1.5rem;
+    opacity: 0.9;
+}
+.handicap-display .handicap-number {
+    font-family: var(--font-display);
+    font-size: 4rem;
+    margin: 0.5rem 0;
+    line-height: 1;
+}
+.handicap-display small {
+    opacity: 0.8;
+}
+
+
 /* Track Round Live */
 .scorecard {
     overflow-x: auto;

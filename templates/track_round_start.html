@@ -8,7 +8,7 @@
 
     <div style="max-width: 600px; margin: 2rem auto;">
         {% if courses %}
-            <form action="{{ url_for('track_round_start') }}" method="post">
+            <form action="{{ url_for('track_round_live') }}" method="post">
                 <div class="form-group">
                     <label for="course_id">Choose Your Course</label>
                     <select id="course_id" name="course_id" class="form-control" style="padding: 0.8rem; font-size: 1.1rem; border-radius: 8px;">

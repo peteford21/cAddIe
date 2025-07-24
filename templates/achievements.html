@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}My Achievements - AI Golf Caddie{% endblock %}
+
+{% block content %}
+    <h1><i class="fas fa-award"></i> My Achievements</h1>
+    <p>Here are the milestones you've unlocked on your golf journey.</p>
+
+    {% if user_achievements %}
+        <div class="achievements-grid">
+            {% for ua in user_achievements %}
+                <div class="achievement-card">
+                    <div class="achievement-icon">
+                        <i class="{{ ua.achievement.icon_class }}"></i>
+                    </div>
+                    <div class="achievement-details">
+                        <h3>{{ ua.achievement.name }}</h3>
+                        <p>{{ ua.achievement.description }}</p>
+                        <small>Unlocked on: {{ ua.date_awarded.strftime('%b %d, %Y') }}</small>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="flash-message flash-info" style="margin-top: 2rem;">
+            No achievements unlocked yet. Keep tracking your rounds to earn them!
+        </div>
+    {% endif %}
+{% endblock %}
